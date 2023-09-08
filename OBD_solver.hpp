@@ -29,4 +29,12 @@ bd_output obd_solver(const std::string& folder_path,
                      int it_max,
                      double error);
 
+// output solution at it_pointer
+bd_output obd_solver2(const std::string& folder_path,
+                     const std::vector<double>& observed_predictor,
+                     int N_pre,
+                     int it_max,
+                     const std::vector<int>& it_pointer,
+                     double error);
+
 #endif /* OBD_solver_hpp */

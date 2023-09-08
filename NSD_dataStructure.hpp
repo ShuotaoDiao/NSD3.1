@@ -160,6 +160,7 @@ struct bd_output {
     unsigned int sol_flag;
     int it_num;
     int cuts_count;
+    int mbd_count;
 };
 
 // functions

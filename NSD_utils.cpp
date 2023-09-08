@@ -302,6 +302,8 @@ validationResult twoStageLP_validation_outputResults(const std::string& folder_p
     writeFile << "Variance in estimating the mean: " << sqrt(result.variance/ _n_) << "\n";
     writeFile << result.alpha << "% confidence interval of expected cost: [" << result.CI_lower << ", " << result.CI_upper << "]\n";
     writeFile << "***************************************************\n";
+    // end cplex environment
+    env_sub.end();
     return result;
 }
 
@@ -321,7 +323,10 @@ void interface_nsd(const std::string& folder_path,
     time_start = std::clock();
     // obtain estimated solution from NSD solver (fast)
     solverOutput res_nsd = nsd_solver(folder_path, max_iterations, f_upperbound, f_lowerbound, sigma_upperbound, sigma_lowerbound, observed_predictor, N_pre, flag_debug);
+    //std::clock_t time_end = std::clock();
     double time_elapse = (std::clock() - time_start) / (double) CLOCKS_PER_SEC;
+    //double time_elapse = ((double) (std::clock() - time_start)) / CLOCKS_PER_SEC;
+    //double time_elapse = (time_end - time_start) / (double) CLOCKS_PER_SEC;
     validationResult res_val = twoStageLP_validation_outputResults(validation_folder_path, res_nsd.x);
     // write the results of quality of candidate solution
     std::string outputResults_path = folder_path + "/nsd3.1_summary.csv";
@@ -333,4 +338,147 @@ void interface_nsd(const std::string& folder_path,
     writeFile << sample_size << ", ";
     writeFile << res_val.mean << ", ";
     writeFile << time_elapse << std::endl;
+}
+
+
+void interface_nsd2(const std::string& folder_path,
+                    const std::string& validation_folder_path,
+                    int max_iterations,
+                    double f_upperbound,
+                    double f_lowerbound,
+                    double sigma_upperbound,
+                    double sigma_lowerbound,
+                    const std::vector<double>& observed_predictor,
+                    const std::vector<int>& it_pointer,
+                    int N_pre,
+                    bool flag_debug) {
+    std::string outputResults_path = folder_path + "/sdknn3.1_summary2.csv";
+    const char* outputResults_path_const = outputResults_path.c_str();
+    std::fstream writeFile;
+    writeFile.open(outputResults_path_const,std::fstream::app);
+    solverOutput res = nsd_solver2(folder_path, max_iterations, f_upperbound, f_lowerbound, sigma_upperbound, sigma_lowerbound, observed_predictor, it_pointer,N_pre, flag_debug);
+    // read file
+    std::string readPath = folder_path + "/sol(sdknn_v3.1).txt";
+    const char* readPathConst = readPath.c_str(); // convert the string type path to constant
+    std::ifstream readFile(readPathConst); // create a readFile object
+    if (readFile.is_open()) {
+        std::string line1;
+        while (getline(readFile, line1)) { // get the whole line
+            std::stringstream ss1(line1); // convert a string into stream
+            unsigned int index_position = 0; // 1 iteration, 2 time, 3 dual_count, 4 minorant_count, 5 solution
+            std::vector<double> candidate_sol;
+            while (getline(ss1, line1, ',')) {
+                index_position += 1;
+                std::stringstream ss2(line1);
+                if (index_position == 1) { // iteration
+                    int it;
+                    ss2 >> it;
+                    writeFile << it << ", "; // iteration
+                    // sample
+                    int total_sample = N_pre + it;
+                    writeFile << total_sample << ", "; // sample
+                }
+                else if (index_position == 2) {
+                    double time_elapse;
+                    ss2 >> time_elapse;
+                    writeFile << time_elapse << ", ";
+                }
+                else if (index_position == 3) {
+                    int dual_count;
+                    ss2 >> dual_count;
+                    writeFile << dual_count << ", ";
+                }
+                else if (index_position == 4) {
+                    int minorant_count;
+                    ss2 >> minorant_count;
+                    writeFile << minorant_count << ", ";
+                }
+                else if (index_position > 4) {
+                    double val;
+                    ss2 >> val;
+                    candidate_sol.push_back(val);
+                }
+            } // end while (getline(ss1, line1, ','))
+            // validate the solution quality
+            validationResult res_val = twoStageLP_validation_outputResults(validation_folder_path, candidate_sol);
+            writeFile << res_val.mean << std::endl;;
+        } // end while (getline(readFile, line1))
+    }
+    writeFile.close();
+}
+
+
+/*
+ Output format: Iteration, Sample, Time, #Duals, #Minorants, Obj
+ */
+void interface_nsd_batch(const std::string& folder_path,
+                         const std::string& validation_folder_path,
+                         int max_iterations,
+                         double f_upperbound,
+                         double f_lowerbound,
+                         double sigma_upperbound,
+                         double sigma_lowerbound,
+                         const std::vector<double>& observed_predictor,
+                         const std::vector<int>& it_pointer, // output estimated solution at the desired iteration
+                         int batch_init, // initial batch size
+                         int batch_incre, // increment on the batch, nonnegative integer
+                         bool flag_debug) {
+    std::string outputResults_path = folder_path + "/sdknn_batch3.1_summary2.csv";
+    const char* outputResults_path_const = outputResults_path.c_str();
+    std::fstream writeFile;
+    writeFile.open(outputResults_path_const,std::fstream::app);
+    solverOutput res = nsd_batch_solver(folder_path, max_iterations, f_upperbound, f_lowerbound, sigma_upperbound, sigma_lowerbound, observed_predictor, it_pointer, batch_init, batch_incre, flag_debug);
+    // read file
+    std::string readPath = folder_path + "/sol(sdknn_batch_v3.1).txt";
+    const char* readPathConst = readPath.c_str(); // convert the string type path to constant
+    std::ifstream readFile(readPathConst); // create a readFile object
+    if (readFile.is_open()) {
+        std::string line1;
+        while (getline(readFile, line1)) { // get the whole line
+            std::stringstream ss1(line1); // convert a string into stream
+            unsigned int index_position = 0; // 1 iteration, 2 time, 3 dual_count, 4 minorant_count, 5 solution
+            std::vector<double> candidate_sol;
+            while (getline(ss1, line1, ',')) {
+                index_position += 1;
+                std::stringstream ss2(line1);
+                if (index_position == 1) { // iteration
+                    int it;
+                    ss2 >> it;
+                    writeFile << it << ", "; // #iterations
+                    // sample
+                    int total_sample = batch_init;
+                    int batch = batch_init;
+                    for (int _it = 0; _it < it - 1; ++_it) {
+                        batch += batch_incre;
+                        total_sample += batch;
+                    }
+                    writeFile << total_sample << ", "; // sample
+                }
+                else if (index_position == 2) {
+                    double time_elapse;
+                    ss2 >> time_elapse;
+                    writeFile << time_elapse << ", ";
+                }
+                else if (index_position == 3) {
+                    int dual_count;
+                    ss2 >> dual_count;
+                    writeFile << dual_count << ", ";
+                }
+                else if (index_position == 4) {
+                    int minorant_count;
+                    ss2 >> minorant_count;
+                    writeFile << minorant_count << ", ";
+                }
+                else if (index_position > 4) {
+                    double val;
+                    ss2 >> val;
+                    candidate_sol.push_back(val);
+                }
+            } // end while (getline(ss1, line1, ','))
+            // validate the solution quality
+            validationResult res_val = twoStageLP_validation_outputResults(validation_folder_path, candidate_sol);
+            writeFile << res_val.mean << std::endl;;
+        } // end while (getline(readFile, line1))
+    }
+    writeFile.close();
 }

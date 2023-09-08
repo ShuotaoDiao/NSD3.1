@@ -20,4 +20,12 @@ void interface_obd(const std::string& folder_path,
                   int it_max,
                   double error);
 
+void interface_obd2(const std::string& folder_path,
+                  const std::string& validation_folder_path,
+                  const std::vector<double>& observed_predictor,
+                  int N_pre,
+                  int it_max,
+                  const std::vector<int>& it_pointer,
+                  double error);
+
 #endif /* OBD_utils_hpp */

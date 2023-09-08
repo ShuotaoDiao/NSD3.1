@@ -34,5 +34,15 @@ solverOutput nsd_solver(const std::string& folder_path,
                 int N_pre,
                 bool flag_debug);
 
+solverOutput nsd_solver2(const std::string& folder_path,
+                         int max_iterations,
+                         double f_upperbound,
+                         double f_lowerbound,
+                         double sigma_upperbound,
+                         double sigma_lowerbound,
+                         const std::vector<double>& observed_predictor,
+                         const std::vector<int>& it_pointer,
+                         int N_pre,
+                         bool flag_debug);
 
 #endif /* NSD_solver_hpp */
